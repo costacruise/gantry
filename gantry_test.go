@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
-
-	"github.com/sirupsen/logrus"
 )
 
 type mockMsg struct{}
@@ -51,18 +48,16 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 	}
 
 	g := Gantry{
-		ctx:    context.TODO(),
-		src:    mockSrc{messages: []Message{fixtureMessage{payload: payload}}},
-		logger: logrus.StandardLogger(),
+		ctx: context.TODO(),
+		src: mockSrc{messages: []Message{fixtureMessage{payload: payload}}},
+		// logger: logrus.StandardLogger(),
+		logger: NoopLogger{},
 	}
 
 	out, err := g.HandleMessageIfExists()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// TODO: Why on earth is this empty?!
-	fmt.Println("output from handlemsg", out)
 
 	if strings.Count(string(out), "Hello Fixture") == 0 {
 		t.Fatal("expected output to include the fixture greeting")

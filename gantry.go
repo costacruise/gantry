@@ -90,14 +90,14 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 		os.Chdir(old)
 	}(pwd)
 
-	var out string
+	var out bytes.Buffer
 
 	// LogWriter implements io.Writer but writes to a structured logger
 	lw := LogWriter{g.logger}
 
 	// MultiWriter as we'd like to capture output in a []byte for
 	// testing purposes
-	multi := io.MultiWriter(&lw, bytes.NewBufferString(out))
+	multi := io.MultiWriter(&lw, &out)
 
 	// Move into temp dir and run the entrypoint.sh
 	os.Chdir(dest)
@@ -107,10 +107,6 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 
 	err = cmd.Run()
 
-	g.logger.Infof("command finished with error: %v", err)
-	// TODO: Why on earth is this empty?!
-	g.logger.Infof("captured output: %v", out)
-
-	return out, nil
+	return out.String(), nil
 
 }
