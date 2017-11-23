@@ -35,6 +35,14 @@ func (ms mockSrc) ReceiveMessageWithContext(context.Context) (Message, error) {
 	return ms.messages[0], nil
 }
 
+func Test_Gantry_DeletesMessagesWithNoEntrypoint(t *testing.T) {
+	t.Skip("not implemented yet")
+}
+
+func Test_Gantry_DeletesMalformedMessages(t *testing.T) {
+	t.Skip("not implemented yet")
+}
+
 func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 
 	payload, err := Payloader{}.DirToBase64EncTarGz("./fixtures/greet")
@@ -53,6 +61,7 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// TODO: Why on earth is this empty?!
 	fmt.Println("output from handlemsg", out)
 
 	if strings.Count(string(out), "Hello Fixture") == 0 {
