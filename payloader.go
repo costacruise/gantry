@@ -14,10 +14,89 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Payloader struct{}
+type Payloader struct {
+	logger Logger
+}
 
-func (p Payloader) EnumerateFileNames(payload []byte) ([]string, error) {
-	return nil, nil
+func (p Payloader) DirToBase64EncTarGz(src string) ([]byte, error) {
+
+	// TODO: maybe make sure logger is never nil?
+	if p.logger == nil {
+		p.logger = NoopLogger{}
+	}
+
+	var b = new(bytes.Buffer)
+	b64 := base64.NewEncoder(base64.StdEncoding, b)
+	defer b64.Close()
+
+	gzw := gzip.NewWriter(b64)
+	defer gzw.Close()
+
+	tw := tar.NewWriter(gzw)
+	defer tw.Close()
+
+	if src == "" {
+		return nil, errors.Errorf("payloader: source dir not specificed")
+	}
+
+	if _, err := os.Stat(src); err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("payloader: can not stat file %s", src))
+	}
+
+	err := filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
+
+		// return early incase walk has errors
+		if err != nil {
+			return errors.Wrap(err, "payloader: can not walk file tree")
+		}
+
+		// create a new dir/file tar header
+		header, err := tar.FileInfoHeader(fi, file)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("payloader: can not create tar file info header (%s)", file))
+		}
+
+		// overwrite header.name to include path, otherwise
+		// all files land in root of tar archive
+		header.Name = filepath.Join(filepath.Dir(file), fi.Name())
+
+		// Remove the src path from the tar archive (ensures
+		// we get the *contents* of the target path, in our
+		// archive root
+		header.Name = strings.TrimPrefix(header.Name, filepath.Clean(src))
+		// TODO: test for this                        ^^^^^^^^^^^^^^
+		// remove it and run Gantry tests to see difference
+
+		// write the tar header
+		if err := tw.WriteHeader(header); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("payloader: can not write tar file info header (%s)", file))
+		}
+
+		// don't try and read directory body contents
+		if !fi.Mode().IsRegular() {
+			return nil
+		}
+
+		// open file for reading the body
+		f, err := os.Open(file)
+		defer f.Close()
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("can not open file for copying body to tar (%s)", file))
+		}
+
+		// copy file data into tar writer
+		if _, err := io.Copy(tw, f); err != nil {
+			return errors.Wrap(err, fmt.Sprintf("can not write tar file body (%s)", file))
+		}
+
+		return nil
+	})
+
+	tw.Close()
+	gzw.Close()
+	b64.Close()
+
+	return b.Bytes(), err
 }
 
 func (p Payloader) Base64EncTarGzToDir(dest string, payload []byte) error {
@@ -78,78 +157,4 @@ func (p Payloader) Base64EncTarGzToDir(dest string, payload []byte) error {
 			}
 		}
 	}
-}
-
-func (p Payloader) DirToBase64EncTarGz(src string) ([]byte, error) {
-
-	var b = new(bytes.Buffer)
-	b64 := base64.NewEncoder(base64.StdEncoding, b)
-	defer b64.Close()
-
-	gzw := gzip.NewWriter(b64)
-	defer gzw.Close()
-
-	tw := tar.NewWriter(gzw)
-	defer tw.Close()
-
-	if src == "" {
-		return nil, errors.Errorf("payloader: source dir not specificed")
-	}
-
-	if _, err := os.Stat(src); err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("payloader: can not stat file %s", src))
-	}
-
-	err := filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
-
-		// return early incase walk has errors
-		if err != nil {
-			return errors.Wrap(err, "payloader: can not walk file tree")
-		}
-
-		// create a new dir/file tar header
-		header, err := tar.FileInfoHeader(fi, file)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("payloader: can not create tar file info header (%s)", file))
-		}
-
-		// overwrite header.name to include path, otherwise
-		// all files land in root of tar archive
-		header.Name = filepath.Join(filepath.Dir(file), fi.Name())
-
-		// Remove the src path from the tar archive (ensures
-		// we get the *contents* of the target path, in our
-		// archive root
-		header.Name = strings.TrimPrefix(header.Name, src)
-
-		// write the tar header
-		if err := tw.WriteHeader(header); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("payloader: can not write tar file info header (%s)", file))
-		}
-
-		// don't try and read directory body contents
-		if !fi.Mode().IsRegular() {
-			return nil
-		}
-
-		// open file for reading the body
-		f, err := os.Open(file)
-		defer f.Close()
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("can not open file for copying body to tar (%s)", file))
-		}
-
-		// copy file data into tar writer
-		if _, err := io.Copy(tw, f); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("can not write tar file body (%s)", file))
-		}
-
-		return nil
-	})
-
-	tw.Close()
-	gzw.Close()
-	b64.Close()
-
-	return b.Bytes(), err
 }
