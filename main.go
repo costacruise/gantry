@@ -39,7 +39,10 @@ func publish(logger *logrus.Entry) {
 	if err != nil {
 		logger.Fatal("can not pack directory info tar archive", err)
 	}
-	NewAWSSQS(queueURL, logger, visibilityTimeout).PublishPayload(payload)
+	err = NewAWSSQS(queueURL, logger, visibilityTimeout).PublishPayload(payload)
+	if err != nil {
+		logger.Fatal("can not publish payload. ", err)
+	}
 }
 
 func consume(logger *logrus.Entry) {
