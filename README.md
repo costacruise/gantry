@@ -1,4 +1,4 @@
-# Gantry
+# Gantry [![Build Status](https://travis-ci.org/costacruise/gantry.svg?branch=master)](https://travis-ci.org/costacruise/gantry)
 
 Send and receive executable payloads over SQS.
 
