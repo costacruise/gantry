@@ -23,13 +23,13 @@ To publish a directory containing a payload:
 
     $ AWS_PROFILE=default \
       AWS_REGION=eu-west-1 \
-      docker run costacruise/gantry gantry -sqs-queue-url=https://sqs.eu-west-1.amazonaws.com/11111111111/example -dir ./path/in/container/to/payload publish
+      docker run costadigital/gantry gantry -sqs-queue-url=https://sqs.eu-west-1.amazonaws.com/11111111111/example -dir ./path/in/container/to/payload publish
 
 To consume a message
 
     $ AWS_PROFILE=default \
       AWS_REGION=eu-west-1 \
-      docker run costacruise/gantry gantry -sqs-queue-url=https://sqs.eu-west-1.amazonaws.com/11111111111/example consume
+      docker run costadigital/gantry gantry -sqs-queue-url=https://sqs.eu-west-1.amazonaws.com/11111111111/example consume
 
 ### Local
 Dependencies are managed with `dep` and can be installed thusly:
