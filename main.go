@@ -37,7 +37,7 @@ func publish(logger *logrus.Entry) {
 	p := Payloader{}
 	payload, err := p.DirToBase64EncTarGz(sourceDir)
 	if err != nil {
-		logger.Fatalf("can not pack directory info tar archive", err)
+		logger.Fatal("can not pack directory info tar archive", err)
 	}
 	NewAWSSQS(queueURL, logger, visibilityTimeout).PublishPayload(payload)
 }

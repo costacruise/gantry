@@ -47,7 +47,7 @@ func (h helper) assertDirectoryContentsEqual(src, dest string) {
 		}
 
 		if srcFI.IsDir() != destFI.IsDir() {
-			h.t.Fatalf("assertDirectoryContentsEqual: source file %q is dir (%q) did not match dest file is dir %q (%q)", srcPath, srcFI.IsDir(), destPath, destFI.IsDir())
+			h.t.Fatalf("assertDirectoryContentsEqual: source file %q is dir (%t) did not match dest file is dir %q (%t)", srcPath, srcFI.IsDir(), destPath, destFI.IsDir())
 		}
 
 		if srcFI.Size() != destFI.Size() {
@@ -58,7 +58,7 @@ func (h helper) assertDirectoryContentsEqual(src, dest string) {
 	})
 
 	if err != nil {
-		h.t.Fatal("assertDirectoryContentsEqual: error %s", err)
+		h.t.Fatalf("assertDirectoryContentsEqual: error %s", err)
 	}
 
 }
