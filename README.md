@@ -9,7 +9,7 @@ compressed tarball and fire it over SNS on a specific queue. Why? In order that
 we can send a shell script and all the relevant data to a remote machine and
 have them execute whatever we have sent to them.
 
-Gantry contains a single executable (Go) that can emit and consume messages
+Gantry contains a single go executable that can emit and consume messages
 over a common queue.
 
 For an example of how an ideal payload directory might look, please see
