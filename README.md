@@ -38,6 +38,10 @@ Dependencies are managed with `dep` and can be installed thusly:
     git clone git@github.com:costacruise/gantry.git $GOPATH/src/github.com/costacruise/gantry
     (cd $GOPATH/src/github.com/costacruise/gantry && dep ensure)
 
+Build the binary by executing
+
+    CGO_ENABLED=0 go build -a -installsuffix cgo -o gantry .
+
 To publish a directory containing a payload:
 
     $ AWS_PROFILE=default \
@@ -48,5 +52,5 @@ To consume a message
 
     $ AWS_PROFILE=default \
       AWS_REGION=eu-west-1 \
-      ./gantry -sqs-queue-url=https://sqs.eu-west-1.amazonaws.com/11111111111/example -dir ./path/to/payload publish
+      ./gantry -sqs-queue-url=https://sqs.eu-west-1.amazonaws.com/11111111111/example consume
 
