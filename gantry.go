@@ -77,8 +77,12 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 
 	err = Payloader{g.logger}.Base64EncTarGzToDir(dest, msg.Payload())
 
-	if _, err := os.Stat(filepath.Join(dest, "entrypoint.sh")); err != nil {
+	entrypointFI, err := os.Stat(filepath.Join(dest, "entrypoint.sh"))
+	if err != nil {
 		return "", errors.Errorf("message with id %s does contain entrypoint.sh in root directory, will be deleted", msg.Id())
+	}
+	if entrypointFI.Mode()&0111 == 0 { // check for executable bit for owner
+		return "", errors.Errorf("expected payload to contain executable entrypoint.sh check the filemode")
 	}
 
 	// Get the current working dir, and restore it once we're done with the script

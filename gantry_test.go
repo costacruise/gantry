@@ -111,3 +111,25 @@ func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
 	}
 
 }
+
+func Test_Gantry_RaisesErrOnNonExecutableEntrypointScript(t *testing.T) {
+
+	payload, err := Payloader{}.DirToBase64EncTarGz("./fixtures/non-executable-entrypoint")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	g := Gantry{
+		ctx:    context.TODO(),
+		src:    mockSrc{messages: []Message{fixtureMessage{payload: payload}}},
+		logger: NoopLogger{},
+	}
+
+	_, err = g.HandleMessageIfExists()
+	if err == nil {
+		t.Fatalf("expected non executable entrypoint to raise an error")
+	}
+	if err.Error() != "expected payload to contain executable entrypoint.sh check the filemode" {
+		t.Fatalf("expected one error from gantry, got another")
+	}
+}
