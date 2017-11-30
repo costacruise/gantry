@@ -93,7 +93,7 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 	var out bytes.Buffer
 
 	// LogWriter implements io.Writer but writes to a structured logger
-	lw := LogWriter{g.logger}
+	lw := LogWriter{g.logger, 0}
 
 	// MultiWriter as we'd like to capture output in a []byte for
 	// testing purposes
@@ -104,6 +104,12 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 	cmd := exec.CommandContext(g.ctx, "./entrypoint.sh")
 	cmd.Stdout = multi
 	cmd.Stderr = multi
+
+	if lw.len == 0 {
+		// this can mean that if it's a script, not a binary it may be missing a
+		// shebang line. Check /tmp for the unpacked messages
+		g.logger.Warn("entrypoint.sh produced no output on stdout/err")
+	}
 
 	err = cmd.Run()
 

@@ -5,6 +5,8 @@ type Logger interface {
 	Debugf(string, ...interface{})
 	Info(...interface{})
 	Infof(string, ...interface{})
+	Warn(...interface{})
+	Warnf(string, ...interface{})
 	Fatal(...interface{})
 	Fatalf(string, ...interface{})
 }
@@ -15,5 +17,7 @@ func (nl NoopLogger) Debug(...interface{})          {}
 func (nl NoopLogger) Debugf(string, ...interface{}) {}
 func (nl NoopLogger) Info(...interface{})           {}
 func (nl NoopLogger) Infof(string, ...interface{})  {}
+func (nl NoopLogger) Warn(...interface{})           {}
+func (nl NoopLogger) Warnf(string, ...interface{})  {}
 func (nl NoopLogger) Fatal(...interface{})          {}
 func (nl NoopLogger) Fatalf(string, ...interface{}) {}

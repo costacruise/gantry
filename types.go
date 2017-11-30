@@ -24,9 +24,11 @@ type MessageSink interface {
 
 type LogWriter struct {
 	logger Logger
+	len    int
 }
 
 func (lw LogWriter) Write(b []byte) (int, error) {
+	lw.len += len(b)
 	// scan for newlines, else the structured logging blows up
 	scanner := bufio.NewScanner(bytes.NewReader(b))
 	for scanner.Scan() {
