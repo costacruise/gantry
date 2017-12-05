@@ -68,7 +68,7 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 	}
 	defer msg.Delete()
 	g.logger.Infof("message id: %s", msg.Id())
-	g.logger.Infof("message payload: %s", msg.Payload())
+	g.logger.Dedugf("message payload: %s", msg.Payload())
 
 	dest, err := ioutil.TempDir("", "gantry-payload")
 	if err != nil {
