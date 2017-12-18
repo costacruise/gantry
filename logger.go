@@ -1,5 +1,6 @@
 package main
 
+// Logger represents a leveled logger interface
 type Logger interface {
 	Debug(...interface{})
 	Debugf(string, ...interface{})
@@ -11,13 +12,14 @@ type Logger interface {
 	Fatalf(string, ...interface{})
 }
 
-type NoopLogger struct{}
+// noopLogger implements a Logger. It does nothing on each level.
+type noopLogger struct{}
 
-func (nl NoopLogger) Debug(...interface{})          {}
-func (nl NoopLogger) Debugf(string, ...interface{}) {}
-func (nl NoopLogger) Info(...interface{})           {}
-func (nl NoopLogger) Infof(string, ...interface{})  {}
-func (nl NoopLogger) Warn(...interface{})           {}
-func (nl NoopLogger) Warnf(string, ...interface{})  {}
-func (nl NoopLogger) Fatal(...interface{})          {}
-func (nl NoopLogger) Fatalf(string, ...interface{}) {}
+func (nl noopLogger) Debug(...interface{})          {}
+func (nl noopLogger) Debugf(string, ...interface{}) {}
+func (nl noopLogger) Info(...interface{})           {}
+func (nl noopLogger) Infof(string, ...interface{})  {}
+func (nl noopLogger) Warn(...interface{})           {}
+func (nl noopLogger) Warnf(string, ...interface{})  {}
+func (nl noopLogger) Fatal(...interface{})          {}
+func (nl noopLogger) Fatalf(string, ...interface{}) {}

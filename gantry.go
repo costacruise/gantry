@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Gantry represents a polling listener for a given MessageSource
 type Gantry struct {
 	ctx context.Context
 	src MessageSource
@@ -42,10 +43,14 @@ func (g *Gantry) loop() {
 
 }
 
+// Run starts the polling loop
 func (g *Gantry) Run() {
 	g.loop()
 }
 
+// HandleMessageIfExists executes the payload from the message is one
+// available. It returns the output of the execution. If there happens any
+// error in between, it returns an empty string and the error.
 func (g *Gantry) HandleMessageIfExists() (string, error) {
 
 	g.logger.Debugf("checking for message")
@@ -67,7 +72,7 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 		return "", nil
 	}
 	defer msg.Delete()
-	g.logger.Infof("message id: %s", msg.Id())
+	g.logger.Infof("message id: %s", msg.ID())
 	g.logger.Debugf("message payload: %s", msg.Payload())
 
 	dest, err := ioutil.TempDir("", "gantry-payload")
@@ -79,7 +84,7 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 
 	entrypointFI, err := os.Stat(filepath.Join(dest, "entrypoint.sh"))
 	if err != nil {
-		return "", errors.Errorf("message with id %s does contain entrypoint.sh in root directory, will be deleted", msg.Id())
+		return "", errors.Errorf("message with id %s does contain entrypoint.sh in root directory, will be deleted", msg.ID())
 	}
 	if entrypointFI.Mode()&0111 == 0 { // check for executable bit for owner
 		return "", errors.Errorf("expected payload to contain executable entrypoint.sh check the filemode")

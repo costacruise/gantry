@@ -14,15 +14,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+// A Payloader defines convenient methods to write a directory of data into a
+// gzipped base64 string tar and back
 type Payloader struct {
 	logger Logger
 }
 
+// DirToBase64EncTarGz encodes the given payload with base64, zips it with
+// gzip and writes it into a tar file.
 func (p Payloader) DirToBase64EncTarGz(src string) ([]byte, error) {
 
 	// TODO: maybe make sure logger is never nil?
 	if p.logger == nil {
-		p.logger = NoopLogger{}
+		p.logger = noopLogger{}
 	}
 
 	var b = new(bytes.Buffer)
@@ -99,6 +103,7 @@ func (p Payloader) DirToBase64EncTarGz(src string) ([]byte, error) {
 	return b.Bytes(), err
 }
 
+// Base64EncTarGzToDir extracts payload as a tar file, unzips each entry and decodes it from base64. It assumes that the tar file represents a driectory and writes any file/directory within into dest.
 func (p Payloader) Base64EncTarGzToDir(dest string, payload []byte) error {
 
 	b64 := base64.NewDecoder(base64.StdEncoding, bytes.NewReader(payload))

@@ -8,20 +8,30 @@ import (
 	"github.com/pkg/errors"
 )
 
+// A Message represents a message which is handled by gantry
 type Message interface {
-	Id() string
+	ID() string
 	Payload() []byte
 	Delete() error
 }
 
+// A MessageQueue represents a queue to receive and publish messages
+type MessageQueue interface {
+	MessageSource
+	MessageSink
+}
+
+// A MessageSource represents a source to retrieve a Message
 type MessageSource interface {
 	ReceiveMessageWithContext(context.Context) (Message, error)
 }
 
+// A MessageSink represents a channel to publish messages to
 type MessageSink interface {
-	PublishMessage(Message) error
+	PublishPayload([]byte) error
 }
 
+// LogWriter represents a logger which can be used as io.Writer
 type LogWriter struct {
 	logger Logger
 	len    int

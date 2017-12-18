@@ -10,8 +10,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewAWSSQS(queueURL string, logger *logrus.Entry, visibilityTimeout int64) aWSSQS {
-	return aWSSQS{
+// NewAWSSQS returns a messageQueue to publish and receive messages over amazon SQS
+// service
+func NewAWSSQS(queueURL string, logger *logrus.Entry, visibilityTimeout int64) MessageQueue {
+	return awsSQS{
 		client:            sqs.New(session.Must(session.NewSession())),
 		logger:            logger.WithFields(logrus.Fields{"component": "aws-sqs-src"}),
 		queueURL:          queueURL,
@@ -19,7 +21,7 @@ func NewAWSSQS(queueURL string, logger *logrus.Entry, visibilityTimeout int64) a
 	}
 }
 
-type aWSSQS struct {
+type awsSQS struct {
 	// Common to publish and consume
 	client   *sqs.SQS
 	queueURL string
@@ -30,7 +32,7 @@ type aWSSQS struct {
 	logger Logger
 }
 
-func (as aWSSQS) PublishPayload(b []byte) error {
+func (as awsSQS) PublishPayload(b []byte) error {
 	// Add MessageAttributes with debug info like digest maybe
 	smi := sqs.SendMessageInput{
 		MessageBody: aws.String(string(b)),
@@ -47,7 +49,7 @@ func (as aWSSQS) PublishPayload(b []byte) error {
 	return nil
 }
 
-func (as aWSSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error) {
+func (as awsSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error) {
 	var (
 		receivedMsg *sqs.Message
 		msg         Message
@@ -76,7 +78,7 @@ func (as aWSSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 
 	// TODO: Check receivedMsg attributes and look for a CDU defined "mime type" (application/gzip?)
 
-	msg = AWSSQSMessage{
+	msg = awsSQSMessage{
 		id:            *receivedMsg.MessageId,
 		receiptHandle: *receivedMsg.ReceiptHandle,
 		payload:       []byte(*receivedMsg.Body),
@@ -102,14 +104,16 @@ func (as aWSSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 	return msg, nil
 }
 
+// An awsSQSMessage represents a SQS message. See
 // http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-queue-message-identifiers.html
-type AWSSQSMessage struct {
+// for details.
+type awsSQSMessage struct {
 	id            string
 	receiptHandle string
 	payload       []byte
 	deleteFn      func() error
 }
 
-func (asm AWSSQSMessage) Id() string      { return asm.id }
-func (asm AWSSQSMessage) Payload() []byte { return asm.payload }
-func (asm AWSSQSMessage) Delete() error   { return asm.deleteFn() }
+func (asm awsSQSMessage) ID() string      { return asm.id }
+func (asm awsSQSMessage) Payload() []byte { return asm.payload }
+func (asm awsSQSMessage) Delete() error   { return asm.deleteFn() }

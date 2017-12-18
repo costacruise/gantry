@@ -8,7 +8,7 @@ import (
 
 type mockMsg struct{}
 
-func (mm mockMsg) Id() string      { return "mock-msg-id-123" }
+func (mm mockMsg) ID() string      { return "mock-msg-id-123" }
 func (mm mockMsg) Payload() []byte { return []byte("mock message payload bytes") }
 func (mm mockMsg) Delete() error   { return nil }
 
@@ -64,7 +64,7 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 		ctx: context.TODO(),
 		src: mockSrc{messages: []Message{fixtureMessage{payload: payload}}},
 		// logger: logrus.StandardLogger(),
-		logger: NoopLogger{},
+		logger: noopLogger{},
 	}
 
 	out, err := g.HandleMessageIfExists()
@@ -85,7 +85,7 @@ func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wls := &warnLoggerSpy{Logger: NoopLogger{}}
+	wls := &warnLoggerSpy{Logger: noopLogger{}}
 
 	g := Gantry{
 		ctx:    context.TODO(),
@@ -122,7 +122,7 @@ func Test_Gantry_RaisesErrOnNonExecutableEntrypointScript(t *testing.T) {
 	g := Gantry{
 		ctx:    context.TODO(),
 		src:    mockSrc{messages: []Message{fixtureMessage{payload: payload}}},
-		logger: NoopLogger{},
+		logger: noopLogger{},
 	}
 
 	_, err = g.HandleMessageIfExists()
