@@ -33,8 +33,8 @@ type MessageSink interface {
 
 // LogWriter represents a logger which can be used as io.Writer
 type LogWriter struct {
-	logger Logger
-	len    int
+	len     int
+	writeFn func(...interface{})
 }
 
 func (lw LogWriter) Write(b []byte) (int, error) {
@@ -42,7 +42,7 @@ func (lw LogWriter) Write(b []byte) (int, error) {
 	// scan for newlines, else the structured logging blows up
 	scanner := bufio.NewScanner(bytes.NewReader(b))
 	for scanner.Scan() {
-		lw.logger.Info(scanner.Text())
+		lw.writeFn(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
 		return 0, errors.Wrap(err, "logwriter: err reading from buffer")

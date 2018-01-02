@@ -106,7 +106,7 @@ func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
 		t.Fatalf("expected one warning from gantry, got %d", len(wls.warnCalledWith))
 	}
 
-	if wls.warnCalledWith[0] != "entrypoint.sh produced no output on stdout/err" {
+	if wls.warnCalledWith[0] != "entrypoint.sh produced no output on stdout" {
 		t.Fatalf("expected warning from gantry didn't match assertion")
 	}
 

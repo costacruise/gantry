@@ -102,26 +102,33 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 	var out bytes.Buffer
 
 	// LogWriter implements io.Writer but writes to a structured logger
-	lw := LogWriter{g.logger, 0}
+	stdoutLogger := LogWriter{writeFn: g.logger.Info}
+	stderrLogger := LogWriter{writeFn: g.logger.Warn}
 
 	// MultiWriter as we'd like to capture output in a []byte for
 	// testing purposes
-	multi := io.MultiWriter(&lw, &out)
+	multiStdout := io.MultiWriter(&stdoutLogger, &out)
+	multiStderr := io.MultiWriter(&stderrLogger, &out)
 
 	// Move into temp dir and run the entrypoint.sh
 	os.Chdir(dest)
 	cmd := exec.CommandContext(g.ctx, "./entrypoint.sh")
-	cmd.Stdout = multi
-	cmd.Stderr = multi
+	cmd.Stdout = multiStdout
+	cmd.Stderr = multiStderr
 
-	if lw.len == 0 {
+	if stdoutLogger.len == 0 {
 		// this can mean that if it's a script, not a binary it may be missing a
 		// shebang line. Check /tmp for the unpacked messages
-		g.logger.Warn("entrypoint.sh produced no output on stdout/err")
+		g.logger.Warn("entrypoint.sh produced no output on stdout")
+	}
+
+	if stderrLogger.len > 0 {
+		// this can mean that if it's a script, not a binary it may be missing a
+		// shebang line. Check /tmp for the unpacked messages
+		g.logger.Warn("entrypoint.sh produced some output on stderr, please check the logs to silence warnings or fix problems")
 	}
 
 	err = cmd.Run()
 
 	return out.String(), nil
-
 }
