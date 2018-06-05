@@ -33,7 +33,7 @@ func init() {
 	flag.Parse()
 }
 
-func publish(logger *logrus.Entry) {
+func publish(logger Logger) {
 	p := Payloader{}
 	payload, err := p.DirToBase64EncTarGz(sourceDir)
 	if err != nil {
@@ -45,12 +45,12 @@ func publish(logger *logrus.Entry) {
 	}
 }
 
-func consume(logger *logrus.Entry) {
+func consume(logger Logger) {
 
 	var ctx, cancel = context.WithCancel(context.Background())
 
 	var g = Gantry{
-		logger: logger.WithFields(logrus.Fields{"component": "gantry"}),
+		logger: logger,
 		src:    NewAWSSQS(queueURL, logger, visibilityTimeout),
 		ctx:    ctx,
 	}
@@ -72,7 +72,9 @@ func main() {
 		logrus.SetFormatter(&logrus.JSONFormatter{})
 	}
 
-	logger := logrus.StandardLogger()
+	logger := NewLogrusLogger(
+		logrus.StandardLogger().WithField("component", "gantry"),
+	)
 
 	if len(queueURL) == 0 {
 		flag.PrintDefaults()
@@ -84,9 +86,9 @@ func main() {
 
 	switch flag.Arg(0) {
 	case "publish":
-		publish(logger.WithFields(logrus.Fields{"action": "publish"}))
+		publish(logger.WithFields(Fields{"action": "publish"}))
 	case "consume":
-		consume(logger.WithFields(logrus.Fields{"action": "consume"}))
+		consume(logger.WithFields(Fields{"action": "consume"}))
 	default:
 		fmt.Fprintf(os.Stderr, "command must be set to one of either %q or %q\n", "publish", "consume")
 		os.Exit(2)

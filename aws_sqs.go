@@ -7,15 +7,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // NewAWSSQS returns a messageQueue to publish and receive messages over amazon SQS
 // service
-func NewAWSSQS(queueURL string, logger *logrus.Entry, visibilityTimeout int64) MessageQueue {
+func NewAWSSQS(queueURL string, logger Logger, visibilityTimeout int64) MessageQueue {
 	return awsSQS{
 		client:            sqs.New(session.Must(session.NewSession())),
-		logger:            logger.WithFields(logrus.Fields{"component": "aws-sqs-src"}),
+		logger:            logger.WithFields(Fields{"component": "aws-sqs-src"}),
 		queueURL:          queueURL,
 		visibilityTimeout: visibilityTimeout,
 	}
