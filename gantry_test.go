@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"strings"
 	"testing"
 )
 
@@ -67,15 +66,10 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 		logger: noopLogger{},
 	}
 
-	out, err := g.HandleMessageIfExists()
+	err = g.HandleMessageIfExists()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if strings.Count(string(out), "Hello Fixture") == 0 {
-		t.Fatal("expected output to include the fixture greeting")
-	}
-
 }
 
 func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
@@ -93,13 +87,9 @@ func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
 		logger: wls,
 	}
 
-	out, err := g.HandleMessageIfExists()
+	err = g.HandleMessageIfExists()
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	if len(out) != 0 {
-		t.Fatalf("expected executable-script-no-shebang fixture to produce no output")
 	}
 
 	if len(wls.warnCalledWith) != 1 {
@@ -125,7 +115,7 @@ func Test_Gantry_RaisesErrOnNonExecutableEntrypointScript(t *testing.T) {
 		logger: noopLogger{},
 	}
 
-	_, err = g.HandleMessageIfExists()
+	err = g.HandleMessageIfExists()
 	if err == nil {
 		t.Fatalf("expected non executable entrypoint to raise an error")
 	}

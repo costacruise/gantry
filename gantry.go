@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -51,7 +49,7 @@ func (g *Gantry) Run() {
 // HandleMessageIfExists executes the payload from the message is one
 // available. It returns the output of the execution. If there happens any
 // error in between, it returns an empty string and the error.
-func (g *Gantry) HandleMessageIfExists() (string, error) {
+func (g *Gantry) HandleMessageIfExists() error {
 
 	g.logger.Debugf("checking for message")
 
@@ -65,11 +63,11 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 		// TODO: think about whether fatalf is a clever part of
 		//       __LOG__ interface
 		g.logger.Fatalf("receive with context failed: %s", err)
-		return "", err
+		return err
 	}
 	if msg == nil {
 		g.logger.Debugf("no messages available for receipt")
-		return "", nil
+		return nil
 	}
 	defer msg.Delete()
 	g.logger.Infof("message id: %s", msg.ID())
@@ -84,37 +82,30 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 
 	entrypointFI, err := os.Stat(filepath.Join(dest, "entrypoint.sh"))
 	if err != nil {
-		return "", errors.Errorf("message with id %s does contain entrypoint.sh in root directory, will be deleted", msg.ID())
+		return errors.Errorf("message with id %s does contain entrypoint.sh in root directory, will be deleted", msg.ID())
 	}
 	if entrypointFI.Mode()&0111 == 0 { // check for executable bit for owner
-		return "", errors.Errorf("expected payload to contain executable entrypoint.sh check the filemode")
+		return errors.Errorf("expected payload to contain executable entrypoint.sh check the filemode")
 	}
 
 	// Get the current working dir, and restore it once we're done with the script
 	pwd, err := os.Getwd()
 	if err != nil {
-		return "", errors.Wrap(err, "cannot get working directory")
+		return errors.Wrap(err, "cannot get working directory")
 	}
 	defer func(old string) {
 		os.Chdir(old)
 	}(pwd)
 
-	var out bytes.Buffer
-
 	// LogWriter implements io.Writer but writes to a structured logger
 	stdoutLogger := LogWriter{writeFn: g.logger.Info}
 	stderrLogger := LogWriter{writeFn: g.logger.Warn}
 
-	// MultiWriter as we'd like to capture output in a []byte for
-	// testing purposes
-	multiStdout := io.MultiWriter(&stdoutLogger, &out)
-	multiStderr := io.MultiWriter(&stderrLogger, &out)
-
 	// Move into temp dir and run the entrypoint.sh
 	os.Chdir(dest)
 	cmd := exec.CommandContext(g.ctx, "./entrypoint.sh")
-	cmd.Stdout = multiStdout
-	cmd.Stderr = multiStderr
+	cmd.Stdout = &stdoutLogger
+	cmd.Stderr = &stderrLogger
 
 	if stdoutLogger.len == 0 {
 		// this can mean that if it's a script, not a binary it may be missing a
@@ -130,5 +121,18 @@ func (g *Gantry) HandleMessageIfExists() (string, error) {
 
 	err = cmd.Run()
 
-	return out.String(), nil
+	l := g.logger.WithFields(Fields{
+		"success": err == nil,
+		"stage":   "completed",
+	})
+
+	if err != nil {
+		l.WithFields(
+			Fields{"error": err.Error()},
+		).Error("executed entrypoint")
+	} else {
+		l.Info("executed entrypoint")
+	}
+
+	return err
 }
