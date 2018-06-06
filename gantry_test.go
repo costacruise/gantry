@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"testing"
 )
 
@@ -53,7 +54,6 @@ func Test_Gantry_DeletesMalformedMessages(t *testing.T) {
 }
 
 func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
-
 	payload, err := Payloader{}.DirToBase64EncTarGz("./fixtures/greet")
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +73,6 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 }
 
 func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
-
 	payload, err := Payloader{}.DirToBase64EncTarGz("./fixtures/executable-script-no-shebang")
 	if err != nil {
 		t.Fatal(err)
@@ -88,8 +87,12 @@ func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
 	}
 
 	err = g.HandleMessageIfExists()
-	if err != nil {
-		t.Fatal(err)
+	pathErr, ok := err.(*os.PathError)
+	if !ok {
+		t.Fatalf("expected path error, got %v", err)
+	}
+	if pathErr.Op != "fork/exec" {
+		t.Fatalf("expected path error operation to equal 'fork/exec', got %q", pathErr.Op)
 	}
 
 	if len(wls.warnCalledWith) != 1 {
@@ -99,11 +102,9 @@ func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
 	if wls.warnCalledWith[0] != "entrypoint.sh produced no output on stdout" {
 		t.Fatalf("expected warning from gantry didn't match assertion")
 	}
-
 }
 
 func Test_Gantry_RaisesErrOnNonExecutableEntrypointScript(t *testing.T) {
-
 	payload, err := Payloader{}.DirToBase64EncTarGz("./fixtures/non-executable-entrypoint")
 	if err != nil {
 		t.Fatal(err)
