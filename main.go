@@ -35,11 +35,12 @@ func init() {
 
 func publish(logger Logger) {
 	p := Payloader{}
-	payload, err := p.DirToBase64EncTarGz(sourceDir)
+	payload, err := p.DirToTarGz(sourceDir)
 	if err != nil {
 		logger.Fatal("can not pack directory info tar archive", err)
 	}
-	err = NewAWSSQS(queueURL, logger, visibilityTimeout).PublishPayload(payload)
+	env := map[string]string{}
+	err = NewAWSSQS(queueURL, logger, visibilityTimeout).PublishPayload(env, payload)
 	if err != nil {
 		logger.Fatal("can not publish payload. ", err)
 	}

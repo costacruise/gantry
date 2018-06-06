@@ -82,7 +82,7 @@ func (g *Gantry) HandleMessageIfExists() error {
 		os.Exit(1)
 	}
 
-	err = Payloader{g.logger}.Base64EncTarGzToDir(dest, msg.Payload())
+	err = Payloader{g.logger}.ExtractTarGzToDir(dest, msg.Payload())
 	// TODO: write test for error case
 
 	entrypointFI, err := os.Stat(filepath.Join(dest, "entrypoint.sh"))
@@ -119,6 +119,7 @@ func (g *Gantry) HandleMessageIfExists() error {
 		"success":        err == nil,
 		"status":         "completed",
 		"command_output": out.String(),
+		"command_env":    msg.Body().Env,
 	})
 
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -20,9 +19,9 @@ type Payloader struct {
 	logger Logger
 }
 
-// DirToBase64EncTarGz encodes the given payload with base64, zips it with
+// DirToTarGz encodes the given payload with base64, zips it with
 // gzip and writes it into a tar file.
-func (p Payloader) DirToBase64EncTarGz(src string) ([]byte, error) {
+func (p Payloader) DirToTarGz(src string) ([]byte, error) {
 
 	// TODO: maybe make sure logger is never nil?
 	if p.logger == nil {
@@ -30,10 +29,8 @@ func (p Payloader) DirToBase64EncTarGz(src string) ([]byte, error) {
 	}
 
 	var b = new(bytes.Buffer)
-	b64 := base64.NewEncoder(base64.StdEncoding, b)
-	defer b64.Close()
 
-	gzw := gzip.NewWriter(b64)
+	gzw := gzip.NewWriter(b)
 	defer gzw.Close()
 
 	tw := tar.NewWriter(gzw)
@@ -98,22 +95,17 @@ func (p Payloader) DirToBase64EncTarGz(src string) ([]byte, error) {
 
 	tw.Close()
 	gzw.Close()
-	b64.Close()
 
 	return b.Bytes(), err
 }
 
-// Base64EncTarGzToDir extracts payload as a tar file, unzips each entry and decodes it from base64. It assumes that the tar file represents a driectory and writes any file/directory within into dest.
-func (p Payloader) Base64EncTarGzToDir(dest string, payload []byte) error {
-
-	b64 := base64.NewDecoder(base64.StdEncoding, bytes.NewReader(payload))
-
-	gzr, err := gzip.NewReader(b64)
-	defer gzr.Close()
+// ExtractTarGzToDir extracts payload as a tar file, unzips each entry. It assumes that the tar file represents a directory and writes any file/directory within into dest.
+func (p Payloader) ExtractTarGzToDir(dest string, payload []byte) error {
+	gzr, err := gzip.NewReader(bytes.NewReader(payload))
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("payloader: error making new gzip reader from b64 source"))
+		return errors.Wrap(err, fmt.Sprintf("payloader: error making new gzip reader from source"))
 	}
-
+	defer gzr.Close()
 	tr := tar.NewReader(gzr)
 
 	for {

@@ -75,12 +75,12 @@ func Test_Payloader_CorrectlyTarsADirectory(t *testing.T) {
 	var src = "fixtures/happy-path"
 
 	p := Payloader{}
-	res, err := p.DirToBase64EncTarGz(src)
+	res, err := p.DirToTarGz(src)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = p.Base64EncTarGzToDir(dest, res)
+	err = p.ExtractTarGzToDir(dest, res)
 	if err != nil {
 		fmt.Println(err)
 	}

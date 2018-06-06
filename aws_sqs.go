@@ -2,12 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/pkg/errors"
 )
+
+type messageBody struct {
+	Env map[string]string `json:"env"`
+}
 
 // NewAWSSQS returns a messageQueue to publish and receive messages over amazon SQS
 // service
@@ -31,11 +36,23 @@ type awsSQS struct {
 	logger Logger
 }
 
-func (as awsSQS) PublishPayload(b []byte) error {
+func (as awsSQS) PublishPayload(env map[string]string, b []byte) error {
+	body := messageBody{Env: env}
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return errors.Wrap(err, "error while marshaling message body")
+	}
+
 	// Add MessageAttributes with debug info like digest maybe
 	smi := sqs.SendMessageInput{
-		MessageBody: aws.String(string(b)),
+		MessageBody: aws.String(string(bodyBytes)),
 		QueueUrl:    &as.queueURL,
+		MessageAttributes: map[string]*sqs.MessageAttributeValue{
+			"data": &sqs.MessageAttributeValue{
+				BinaryValue: b,
+				DataType:    aws.String("Binary"),
+			},
+		},
 	}
 
 	smo, err := as.client.SendMessage(&smi)
@@ -57,9 +74,10 @@ func (as awsSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 	as.logger.Debugf("checking for single message on sqs queue %s", as.queueURL)
 
 	rmi := sqs.ReceiveMessageInput{
-		MaxNumberOfMessages: aws.Int64(1),
-		QueueUrl:            aws.String(as.queueURL),
-		VisibilityTimeout:   aws.Int64(as.visibilityTimeout),
+		MaxNumberOfMessages:   aws.Int64(1),
+		QueueUrl:              aws.String(as.queueURL),
+		VisibilityTimeout:     aws.Int64(as.visibilityTimeout),
+		MessageAttributeNames: []*string{aws.String("data")},
 	}
 
 	resp, err := as.client.ReceiveMessageWithContext(ctx, &rmi)
@@ -75,12 +93,26 @@ func (as awsSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 		return nil, nil
 	}
 
-	// TODO: Check receivedMsg attributes and look for a CDU defined "mime type" (application/gzip?)
+	data := []byte{}
+
+	dataAttr, ok := receivedMsg.MessageAttributes["data"]
+	if ok {
+		data = dataAttr.BinaryValue
+	} else {
+		as.logger.Warnf("received no data attribute")
+	}
+
+	var body messageBody
+	err = json.Unmarshal([]byte(*receivedMsg.Body), &body)
+	if err != nil {
+		as.logger.Warnf("error while unmarshaling SQS message body: %v", err)
+	}
 
 	msg = awsSQSMessage{
 		id:            *receivedMsg.MessageId,
 		receiptHandle: *receivedMsg.ReceiptHandle,
-		payload:       []byte(*receivedMsg.Body),
+		body:          body,
+		payload:       data,
 		deleteFn: func() error {
 			if _, err := as.client.DeleteMessage(&sqs.DeleteMessageInput{
 				QueueUrl:      &as.queueURL,
@@ -109,10 +141,12 @@ func (as awsSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 type awsSQSMessage struct {
 	id            string
 	receiptHandle string
+	body          messageBody
 	payload       []byte
 	deleteFn      func() error
 }
 
-func (asm awsSQSMessage) ID() string      { return asm.id }
-func (asm awsSQSMessage) Payload() []byte { return asm.payload }
-func (asm awsSQSMessage) Delete() error   { return asm.deleteFn() }
+func (asm awsSQSMessage) ID() string        { return asm.id }
+func (asm awsSQSMessage) Body() messageBody { return asm.body }
+func (asm awsSQSMessage) Payload() []byte   { return asm.payload }
+func (asm awsSQSMessage) Delete() error     { return asm.deleteFn() }

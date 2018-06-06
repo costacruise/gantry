@@ -11,6 +11,7 @@ import (
 // A Message represents a message which is handled by gantry
 type Message interface {
 	ID() string
+	Body() messageBody
 	Payload() []byte
 	Delete() error
 }
@@ -28,7 +29,7 @@ type MessageSource interface {
 
 // A MessageSink represents a channel to publish messages to
 type MessageSink interface {
-	PublishPayload([]byte) error
+	PublishPayload(env map[string]string, data []byte) error
 }
 
 // LogWriter represents a logger which can be used as io.Writer
