@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,7 +36,6 @@ func (g *Gantry) loop() {
 			ticker.Stop()
 			return
 		case <-ticker.C:
-			g.logger.Debug("tick, checking for new messages")
 			g.HandleMessageIfExists()
 		}
 	}
@@ -50,7 +51,6 @@ func (g *Gantry) Run() {
 // available. It returns the output of the execution. If there happens any
 // error in between, it returns an empty string and the error.
 func (g *Gantry) HandleMessageIfExists() error {
-
 	g.logger.Debugf("checking for message")
 
 	// TODO:
@@ -70,15 +70,20 @@ func (g *Gantry) HandleMessageIfExists() error {
 		return nil
 	}
 	defer msg.Delete()
-	g.logger.Infof("message id: %s", msg.ID())
-	g.logger.Debugf("message payload: %s", msg.Payload())
+	logger := g.logger.WithFields(Fields{
+		"status": "message received",
+	})
+	logger.Infof("message id: %s", msg.ID())
+	logger.Debugf("message payload: %s", msg.Payload())
 
 	dest, err := ioutil.TempDir("", "gantry-payload")
 	if err != nil {
 		g.logger.Fatalf("can not create temp dir %s", err)
+		os.Exit(1)
 	}
 
 	err = Payloader{g.logger}.Base64EncTarGzToDir(dest, msg.Payload())
+	// TODO: write test for error case
 
 	entrypointFI, err := os.Stat(filepath.Join(dest, "entrypoint.sh"))
 	if err != nil {
@@ -97,33 +102,23 @@ func (g *Gantry) HandleMessageIfExists() error {
 		os.Chdir(old)
 	}(pwd)
 
-	// LogWriter implements io.Writer but writes to a structured logger
-	stdoutLogger := LogWriter{writeFn: g.logger.Info}
-	stderrLogger := LogWriter{writeFn: g.logger.Warn}
+	var out bytes.Buffer
+
+	stdOutLogger := log.New(&out, "stdout>> ", 0)
+	stdErrLogger := log.New(&out, "stderr>> ", 0)
 
 	// Move into temp dir and run the entrypoint.sh
 	os.Chdir(dest)
 	cmd := exec.CommandContext(g.ctx, "./entrypoint.sh")
-	cmd.Stdout = &stdoutLogger
-	cmd.Stderr = &stderrLogger
-
-	if stdoutLogger.len == 0 {
-		// this can mean that if it's a script, not a binary it may be missing a
-		// shebang line. Check /tmp for the unpacked messages
-		g.logger.Warn("entrypoint.sh produced no output on stdout")
-	}
-
-	if stderrLogger.len > 0 {
-		// this can mean that if it's a script, not a binary it may be missing a
-		// shebang line. Check /tmp for the unpacked messages
-		g.logger.Warn("entrypoint.sh produced some output on stderr, please check the logs to silence warnings or fix problems")
-	}
+	cmd.Stdout = &LogWriter{writeFn: stdOutLogger.Print}
+	cmd.Stderr = &LogWriter{writeFn: stdErrLogger.Print}
 
 	err = cmd.Run()
 
 	l := g.logger.WithFields(Fields{
-		"success": err == nil,
-		"stage":   "completed",
+		"success":        err == nil,
+		"status":         "completed",
+		"command_output": out.String(),
 	})
 
 	if err != nil {
