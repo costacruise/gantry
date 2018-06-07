@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -128,6 +129,51 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 			}
 		})
 	})
+}
+
+func Test_Gantry_PropagatesEnvToEntrypoint(t *testing.T) {
+	payload, err := Payloader{}.DirToTarGz("./fixtures/env-propagation")
+	if err != nil {
+		t.Fatal(err)
+	}
+	logger := NewRecorder()
+
+	g := Gantry{
+		ctx: context.TODO(),
+		src: mockSrc{messages: []Message{
+			fixtureMessage{
+				payload: payload,
+				body: messageBody{
+					Env: env{"test": "out"},
+				},
+			},
+		}},
+		logger: logger,
+	}
+
+	err = g.HandleMessageIfExists()
+	if err != nil {
+		t.Fatal(err)
+	}
+	byLevel := Logs(logger.Logs).ByLevel()
+
+	infoLogs := byLevel["info"]
+
+	if len(infoLogs) != 2 {
+		t.Fatalf("expected 2 info log, got %d", len(infoLogs))
+	}
+
+	fields := infoLogs[1].Fields()
+	commandOutput, ok := fields["command_output"]
+	if !ok {
+		t.Fatalf("expected log fields to contain 'command_output'")
+	}
+
+	expected := "stdout>> test=out"
+
+	if !strings.Contains(commandOutput.(string), expected) {
+		t.Errorf("expected command_output to contain %q, did not: %q", expected, commandOutput.(string))
+	}
 }
 
 func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {

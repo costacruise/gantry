@@ -110,6 +110,7 @@ func (g *Gantry) HandleMessageIfExists() error {
 	// Move into temp dir and run the entrypoint.sh
 	os.Chdir(dest)
 	cmd := exec.CommandContext(g.ctx, "./entrypoint.sh")
+	cmd.Env = msg.Body().Env.ToEnviron()
 	cmd.Stdout = &LogWriter{writeFn: stdOutLogger.Print}
 	cmd.Stderr = &LogWriter{writeFn: stdErrLogger.Print}
 
@@ -119,7 +120,7 @@ func (g *Gantry) HandleMessageIfExists() error {
 		"success":        err == nil,
 		"status":         "completed",
 		"command_output": out.String(),
-		"command_env":    msg.Body().Env,
+		"command_env":    map[string]string(msg.Body().Env),
 	})
 
 	if err != nil {

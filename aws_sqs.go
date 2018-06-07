@@ -11,7 +11,7 @@ import (
 )
 
 type messageBody struct {
-	Env map[string]string `json:"env"`
+	Env env `json:"env"`
 }
 
 // NewAWSSQS returns a messageQueue to publish and receive messages over amazon SQS

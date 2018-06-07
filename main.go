@@ -23,6 +23,7 @@ var (
 
 	// for publish
 	sourceDir string
+	environ   env
 )
 
 func init() {
@@ -30,6 +31,7 @@ func init() {
 	flag.StringVar(&outputType, "o", "", "set -o json to print output as JSON")
 	flag.StringVar(&sourceDir, "dir", "", "The directory to pack into the tarball and publish to sqs")
 	flag.Int64Var(&visibilityTimeout, "sqs-visibility-timeout-sec", 300, "The number of seconds messages received by this working should be invisible to other workers (before deletion)")
+	flag.Var(&environ, "e", "The environment variables which will be injected to the executable payload")
 	flag.Parse()
 }
 
@@ -39,8 +41,8 @@ func publish(logger Logger) {
 	if err != nil {
 		logger.Fatal("can not pack directory info tar archive", err)
 	}
-	env := map[string]string{}
-	err = NewAWSSQS(queueURL, logger, visibilityTimeout).PublishPayload(env, payload)
+
+	err = NewAWSSQS(queueURL, logger, visibilityTimeout).PublishPayload(environ, payload)
 	if err != nil {
 		logger.Fatal("can not publish payload. ", err)
 	}
