@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -122,12 +121,6 @@ func (g *Gantry) HandleMessageIfExists() error {
 		"command_env":       map[string]string(msg.Body().Env),
 		"message_queued_at": msg.SentAt().Format(time.RFC3339),
 	})
-
-	g.logger.WithFields(Fields{
-		"error":          fmt.Sprintf("%v", err),
-		"command_output": out.String(),
-		"command_env":    map[string]string(msg.Body().Env),
-	}).Debug("executed command")
 
 	if err != nil {
 		l.WithFields(

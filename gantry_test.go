@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 )
@@ -155,7 +154,7 @@ func Test_Gantry_PropagatesEnvToEntrypoint(t *testing.T) {
 			fixtureMessage{
 				payload: payload,
 				body: messageBody{
-					Env: env{"test": "out"},
+					Env: env{"TEST_VAR": "is set"},
 				},
 			},
 		}},
@@ -165,25 +164,6 @@ func Test_Gantry_PropagatesEnvToEntrypoint(t *testing.T) {
 	err = g.HandleMessageIfExists()
 	if err != nil {
 		t.Fatal(err)
-	}
-	byLevel := Logs(logger.Logs).ByLevel()
-
-	debugLogs := byLevel["debug"]
-
-	if len(debugLogs) == 0 {
-		t.Fatalf("expected debug logto contain messages")
-	}
-
-	fields := debugLogs[len(debugLogs)-1].Fields()
-	commandOutput, ok := fields["command_output"]
-	if !ok {
-		t.Fatalf("expected log fields to contain 'command_output'")
-	}
-
-	expected := "stdout>> test=out"
-
-	if !strings.Contains(commandOutput.(string), expected) {
-		t.Errorf("expected command_output to contain %q, did not: %q", expected, commandOutput.(string))
 	}
 }
 
