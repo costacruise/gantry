@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -11,6 +12,7 @@ import (
 // A Message represents a message which is handled by gantry
 type Message interface {
 	ID() string
+	SentAt() time.Time
 	Body() messageBody
 	Payload() []byte
 	Delete() error

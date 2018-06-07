@@ -6,11 +6,13 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 type mockMsg struct{}
 
 func (mm mockMsg) ID() string        { return "mock-msg-id-123" }
+func (mm mockMsg) SentAt() time.Time { return time.Now() }
 func (mm mockMsg) Body() messageBody { return messageBody{} }
 func (mm mockMsg) Payload() []byte   { return []byte("mock message payload bytes") }
 func (mm mockMsg) Delete() error     { return nil }
@@ -19,10 +21,12 @@ type fixtureMessage struct {
 	mockMsg
 	payload []byte
 	body    messageBody
+	sentAt  time.Time
 }
 
 func (fm fixtureMessage) Payload() []byte   { return fm.payload }
 func (fm fixtureMessage) Body() messageBody { return fm.body }
+func (fm fixtureMessage) SentAt() time.Time { return fm.sentAt }
 
 type mockSrc struct {
 	mockErr  error
@@ -86,6 +90,7 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 				body: messageBody{
 					Env: map[string]string{"test": "out"},
 				},
+				sentAt: time.Date(2018, time.June, 01, 0, 0, 0, 0, time.UTC),
 			},
 		}},
 		logger: logger,
@@ -107,19 +112,26 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 
 		t.Run("on message receive", func(t *testing.T) {
 			fields := infoLogs[0].Fields()
+			expectedFields := map[string]interface{}{
+				"status":            "message received",
+				"message_queued_at": "2018-06-01T00:00:00Z",
+			}
 
-			if fields["status"] != "message received" {
-				t.Errorf("expected log field 'status' to equal 'completed', got '%v'", fields["status"])
+			for k, v := range expectedFields {
+				if !reflect.DeepEqual(v, fields[k]) {
+					t.Errorf("expected log field %q to equal '%v', got '%v'", k, v, fields[k])
+				}
 			}
 		})
 
 		t.Run("on completion", func(t *testing.T) {
 			fields := infoLogs[1].Fields()
 			expectedFields := map[string]interface{}{
-				"success":        true,
-				"status":         "completed",
-				"command_output": "stdout>> Hello Fixture\n",
-				"command_env":    map[string]string{"test": "out"},
+				"success":           true,
+				"status":            "completed",
+				"command_output":    "stdout>> Hello Fixture\n",
+				"command_env":       map[string]string{"test": "out"},
+				"message_queued_at": "2018-06-01T00:00:00Z",
 			}
 
 			for k, v := range expectedFields {

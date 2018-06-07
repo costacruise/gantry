@@ -70,11 +70,10 @@ func (g *Gantry) HandleMessageIfExists() error {
 		return nil
 	}
 	defer msg.Delete()
-	logger := g.logger.WithFields(Fields{
-		"status": "message received",
-	})
-	logger.Infof("message id: %s", msg.ID())
-	logger.Debugf("message payload: %s", msg.Payload())
+	g.logger.WithFields(Fields{
+		"status":            "message received",
+		"message_queued_at": msg.SentAt().Format(time.RFC3339),
+	}).Infof("message id: %s", msg.ID())
 
 	dest, err := ioutil.TempDir("", "gantry-payload")
 	if err != nil {
@@ -117,10 +116,11 @@ func (g *Gantry) HandleMessageIfExists() error {
 	err = cmd.Run()
 
 	l := g.logger.WithFields(Fields{
-		"success":        err == nil,
-		"status":         "completed",
-		"command_output": out.String(),
-		"command_env":    map[string]string(msg.Body().Env),
+		"success":           err == nil,
+		"status":            "completed",
+		"command_output":    out.String(),
+		"command_env":       map[string]string(msg.Body().Env),
+		"message_queued_at": msg.SentAt().Format(time.RFC3339),
 	})
 
 	if err != nil {

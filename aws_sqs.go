@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -77,6 +79,7 @@ func (as awsSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 		MaxNumberOfMessages:   aws.Int64(1),
 		QueueUrl:              aws.String(as.queueURL),
 		VisibilityTimeout:     aws.Int64(as.visibilityTimeout),
+		AttributeNames:        []*string{aws.String("SentTimestamp")},
 		MessageAttributeNames: []*string{aws.String("data")},
 	}
 
@@ -102,6 +105,19 @@ func (as awsSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 		as.logger.Warnf("received no data attribute")
 	}
 
+	sentAt := time.Time{}
+	sentAtAttr, ok := receivedMsg.Attributes["SentTimestamp"]
+	if ok {
+		timestamp, err := strconv.ParseInt(*sentAtAttr, 10, 64)
+		if err == nil {
+			sentAt = time.Unix(0, timestamp*int64(time.Millisecond))
+		} else {
+			as.logger.Warnf("malformed sentTimestamp: %q", *sentAtAttr)
+		}
+	} else {
+		as.logger.Warnf("received no SentTimestamp attribute")
+	}
+
 	var body messageBody
 	err = json.Unmarshal([]byte(*receivedMsg.Body), &body)
 	if err != nil {
@@ -111,6 +127,7 @@ func (as awsSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 	msg = awsSQSMessage{
 		id:            *receivedMsg.MessageId,
 		receiptHandle: *receivedMsg.ReceiptHandle,
+		sentAt:        sentAt,
 		body:          body,
 		payload:       data,
 		deleteFn: func() error {
@@ -141,12 +158,14 @@ func (as awsSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 type awsSQSMessage struct {
 	id            string
 	receiptHandle string
+	sentAt        time.Time
 	body          messageBody
 	payload       []byte
 	deleteFn      func() error
 }
 
 func (asm awsSQSMessage) ID() string        { return asm.id }
+func (asm awsSQSMessage) SentAt() time.Time { return asm.sentAt }
 func (asm awsSQSMessage) Body() messageBody { return asm.body }
 func (asm awsSQSMessage) Payload() []byte   { return asm.payload }
 func (asm awsSQSMessage) Delete() error     { return asm.deleteFn() }
