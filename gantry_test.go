@@ -129,7 +129,6 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 			expectedFields := map[string]interface{}{
 				"success":           true,
 				"status":            "completed",
-				"command_output":    "stdout>> Hello Fixture\n",
 				"command_env":       map[string]string{"test": "out"},
 				"message_queued_at": "2018-06-01T00:00:00Z",
 			}
@@ -169,13 +168,13 @@ func Test_Gantry_PropagatesEnvToEntrypoint(t *testing.T) {
 	}
 	byLevel := Logs(logger.Logs).ByLevel()
 
-	infoLogs := byLevel["info"]
+	debugLogs := byLevel["debug"]
 
-	if len(infoLogs) != 2 {
-		t.Fatalf("expected 2 info log, got %d", len(infoLogs))
+	if len(debugLogs) == 0 {
+		t.Fatalf("expected debug logto contain messages")
 	}
 
-	fields := infoLogs[1].Fields()
+	fields := debugLogs[len(debugLogs)-1].Fields()
 	commandOutput, ok := fields["command_output"]
 	if !ok {
 		t.Fatalf("expected log fields to contain 'command_output'")
@@ -197,8 +196,16 @@ func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
 	logger := NewRecorder()
 
 	g := Gantry{
-		ctx:    context.TODO(),
-		src:    mockSrc{messages: []Message{fixtureMessage{payload: payload}}},
+		ctx: context.TODO(),
+		src: mockSrc{messages: []Message{
+			fixtureMessage{
+				payload: payload,
+				body: messageBody{
+					Env: map[string]string{"test": "out"},
+				},
+				sentAt: time.Date(2018, time.June, 01, 0, 0, 0, 0, time.UTC),
+			},
+		}},
 		logger: logger,
 	}
 
@@ -221,15 +228,23 @@ func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
 		}
 
 		fields := errorLogs[0].Fields()
+		expectedFields := map[string]interface{}{
+			"success":           false,
+			"status":            "completed",
+			"command_env":       map[string]string{"test": "out"},
+			"message_queued_at": "2018-06-01T00:00:00Z",
+		}
 
+		for k, v := range expectedFields {
+			if !reflect.DeepEqual(v, fields[k]) {
+				t.Errorf("expected log field %q to equal '%v', got '%v'", k, v, fields[k])
+			}
+		}
 		if fields["success"] != false {
 			t.Errorf("expected log field 'success' to equal 'false', got '%v'", fields["success"])
 		}
 		if fields["status"] != "completed" {
 			t.Errorf("expected log field 'status' to equal 'completed', got '%v'", fields["status"])
-		}
-		if fields["command_output"] != "" {
-			t.Errorf(`expected log field 'command_output' to equal '""', got '%v'`, fields["command_output"])
 		}
 		if _, ok := fields["error"]; !ok {
 			t.Errorf("expected entry to contain 'error' field")
