@@ -129,6 +129,7 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 				"success":           true,
 				"status":            "completed",
 				"command_env":       map[string]string{"test": "out"},
+				"command_stderr":    "Hello stderr\n",
 				"message_queued_at": "2018-06-01T00:00:00Z",
 			}
 
@@ -212,6 +213,7 @@ func Test_Gantry_RunsExecutableEntrypointScriptWithoutShebang(t *testing.T) {
 			"success":           false,
 			"status":            "completed",
 			"command_env":       map[string]string{"test": "out"},
+			"command_stderr":    "",
 			"message_queued_at": "2018-06-01T00:00:00Z",
 		}
 

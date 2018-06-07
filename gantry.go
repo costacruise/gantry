@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -101,17 +100,13 @@ func (g *Gantry) HandleMessageIfExists() error {
 		os.Chdir(old)
 	}(pwd)
 
-	var out bytes.Buffer
-
-	stdOutLogger := log.New(&out, "stdout>> ", 0)
-	stdErrLogger := log.New(&out, "stderr>> ", 0)
+	var stdErr bytes.Buffer
 
 	// Move into temp dir and run the entrypoint.sh
 	os.Chdir(dest)
 	cmd := exec.CommandContext(g.ctx, "./entrypoint.sh")
 	cmd.Env = msg.Body().Env.ToEnviron()
-	cmd.Stdout = &LogWriter{writeFn: stdOutLogger.Print}
-	cmd.Stderr = &LogWriter{writeFn: stdErrLogger.Print}
+	cmd.Stderr = &stdErr
 
 	err = cmd.Run()
 
@@ -119,6 +114,7 @@ func (g *Gantry) HandleMessageIfExists() error {
 		"success":           err == nil,
 		"status":            "completed",
 		"command_env":       map[string]string(msg.Body().Env),
+		"command_stderr":    stdErr.String(),
 		"message_queued_at": msg.SentAt().Format(time.RFC3339),
 	})
 
