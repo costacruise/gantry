@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"strconv"
 	"time"
@@ -59,6 +60,12 @@ func (as awsSQS) PublishPayload(env map[string]string, b []byte) error {
 
 	smo, err := as.client.SendMessage(&smi)
 	if err != nil {
+		as.logger.WithFields(Fields{
+			"error":       err,
+			"sqs_message": smi,
+			"payload_b64": base64.StdEncoding.EncodeToString(b),
+			"env":         env,
+		}).Errorf("Error sending sns message")
 		return errors.Wrap(err, "could not send payload to SQS")
 	}
 
