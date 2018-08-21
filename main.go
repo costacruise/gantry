@@ -17,6 +17,7 @@ var (
 	// common concerns
 	queueURL   string
 	outputType string
+	debug      bool
 
 	// for consume
 	visibilityTimeout int64
@@ -30,6 +31,7 @@ func init() {
 	flag.StringVar(&queueURL, "sqs-queue-url", "", "The full SQS queue URL to use to receive messages")
 	flag.StringVar(&outputType, "o", "", "set -o json to print output as JSON")
 	flag.StringVar(&sourceDir, "dir", "", "The directory to pack into the tarball and publish to sqs")
+	flag.BoolVar(&debug, "debug", false, "Enable debug output")
 	flag.Int64Var(&visibilityTimeout, "sqs-visibility-timeout-sec", 300, "The number of seconds messages received by this working should be invisible to other workers (before deletion)")
 	flag.Var(&environ, "e", "The environment variables which will be injected to the executable payload")
 	flag.Parse()

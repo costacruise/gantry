@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"strconv"
 	"time"
@@ -20,8 +19,15 @@ type messageBody struct {
 // NewAWSSQS returns a messageQueue to publish and receive messages over amazon SQS
 // service
 func NewAWSSQS(queueURL string, logger Logger, visibilityTimeout int64) MessageQueue {
+	config := aws.NewConfig()
+	if debug {
+		config = config.WithLogLevel(aws.LogDebug | aws.LogDebugWithRequestErrors | aws.LogDebugWithHTTPBody)
+	}
 	return awsSQS{
-		client:            sqs.New(session.Must(session.NewSession())),
+		client: sqs.New(
+			session.Must(session.NewSession()),
+			config,
+		),
 		logger:            logger.WithFields(Fields{"component": "aws-sqs-src"}),
 		queueURL:          queueURL,
 		visibilityTimeout: visibilityTimeout,
@@ -61,10 +67,9 @@ func (as awsSQS) PublishPayload(env map[string]string, b []byte) error {
 	smo, err := as.client.SendMessage(&smi)
 	if err != nil {
 		as.logger.WithFields(Fields{
-			"error":       err,
-			"sqs_message": smi,
-			"payload_b64": base64.StdEncoding.EncodeToString(b),
-			"env":         env,
+			"error":          err,
+			"payload_length": len(b),
+			"message_body":   body,
 		}).Errorf("Error sending sns message")
 		return errors.Wrap(err, "could not send payload to SQS")
 	}
