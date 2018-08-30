@@ -112,13 +112,17 @@ func Test_Gantry_RunsEntrypointScriptInMessagesWithSanePayloads(t *testing.T) {
 		t.Run("on message receive", func(t *testing.T) {
 			fields := infoLogs[0].Fields()
 			expectedFields := map[string]interface{}{
-				"status":            "message received",
-				"message_queued_at": "2018-06-01T00:00:00Z",
+				"status": "message received",
+				"message": map[string]interface{}{
+					"id":        "mock-msg-id-123",
+					"body":      messageBody{Env: env{"test": "out"}},
+					"queued_at": "2018-06-01T00:00:00Z",
+				},
 			}
 
 			for k, v := range expectedFields {
 				if !reflect.DeepEqual(v, fields[k]) {
-					t.Errorf("expected log field %q to equal '%v', got '%v'", k, v, fields[k])
+					t.Errorf("expected log field %q to equal '%+#v', got '%+#v'", k, v, fields[k])
 				}
 			}
 		})
