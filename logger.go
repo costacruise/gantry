@@ -1,13 +1,45 @@
 package main
 
 import (
+	"fmt"
+
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+type temporary interface {
+	Temporary() bool
+}
+
+type timeout interface {
+	Timeout() bool
+}
+
+type stackTracer interface {
+	StackTrace() errors.StackTrace
+}
 
 // Fields contains structured data added to the logs
 type Fields map[string]interface{}
 
 func (f Fields) logError(err error) Fields {
+	errorFields := map[string]interface{}{
+		"message":   err.Error(),
+		"name":      fmt.Sprintf("%T", errors.Cause(err)),
+		"stack":     nil,
+		"temporary": false,
+		"timeout":   false,
+	}
+	if st, ok := err.(stackTracer); ok {
+		errorFields["stack"] = fmt.Sprintf("%v", st.StackTrace())
+	}
+	if t, ok := err.(temporary); ok {
+		errorFields["temporary"] = t.Temporary()
+	}
+	if t, ok := err.(timeout); ok {
+		errorFields["timeout"] = t.Timeout()
+	}
+	f["err"] = errorFields
 	f["error"] = err
 	return f
 }
