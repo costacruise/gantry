@@ -67,10 +67,9 @@ func (as awsSQS) PublishPayload(env map[string]string, b []byte) error {
 	smo, err := as.client.SendMessage(&smi)
 	if err != nil {
 		as.logger.WithFields(Fields{
-			"error":          err,
 			"payload_length": len(b),
 			"message_body":   body,
-		}).Errorf("Error sending sns message")
+		}.logError(err)).Errorf("Error sending sns message")
 		return errors.Wrap(err, "could not send payload to SQS")
 	}
 
@@ -124,16 +123,18 @@ func (as awsSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 		if err == nil {
 			sentAt = time.Unix(0, timestamp*int64(time.Millisecond))
 		} else {
-			as.logger.Warnf("malformed sentTimestamp: %q", *sentAtAttr)
+			as.logger.WithFields(Fields{
+				"sent_timestamp": sentAtAttr,
+			}.logError(err)).Warn("malformed sent timestamp")
 		}
 	} else {
-		as.logger.Warnf("received no SentTimestamp attribute")
+		as.logger.Warn("received no SentTimestamp attribute")
 	}
 
 	var body messageBody
 	err = json.Unmarshal([]byte(*receivedMsg.Body), &body)
 	if err != nil {
-		as.logger.Warnf("error while unmarshaling SQS message body: %v", err)
+		as.logger.WithFields(ErrorFields(err)).Warn("error while unmarshaling SQS message body")
 	}
 
 	msg = awsSQSMessage{
@@ -149,7 +150,9 @@ func (as awsSQS) ReceiveMessageWithContext(ctx context.Context) (Message, error)
 			}); err != nil {
 				return errors.Errorf("aws-sqs-message: could not delete message with id %s", *receivedMsg.MessageId)
 			}
-			as.logger.Infof("aws-sqs-message: deleted message with id %s", *receivedMsg.MessageId)
+			as.logger.WithFields(Fields{
+				"message_id": *receivedMsg.MessageId,
+			}).Infof("aws-sqs-message: deleted message")
 			return nil
 		},
 	}

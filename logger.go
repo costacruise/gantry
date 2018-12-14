@@ -7,6 +7,16 @@ import (
 // Fields contains structured data added to the logs
 type Fields map[string]interface{}
 
+func (f Fields) logError(err error) Fields {
+	f["error"] = err
+	return f
+}
+
+// ErrorFields returns fields which include the error
+func ErrorFields(err error) Fields {
+	return Fields{}.logError(err)
+}
+
 // Logger represents a leveled logger interface
 type Logger interface {
 	Debug(...interface{})

@@ -59,9 +59,9 @@ func (g *Gantry) HandleMessageIfExists() error {
 	//   (err nil msg = error)
 	msg, err := g.src.ReceiveMessageWithContext(g.ctx)
 	if err != nil {
-		g.logger.WithFields(Fields{
-			"error": err,
-		}).Error("receive message failed")
+		g.logger.WithFields(
+			ErrorFields(err),
+		).Error("receive message failed")
 		return err
 	}
 	if msg == nil {
@@ -82,9 +82,9 @@ func (g *Gantry) HandleMessageIfExists() error {
 
 	dest, err := ioutil.TempDir("", "gantry-payload")
 	if err != nil {
-		messageLogger.WithFields(Fields{
-			"error": err,
-		}).Fatal("can not create temp dir")
+		messageLogger.WithFields(
+			ErrorFields(err),
+		).Fatal("can not create temp dir")
 		os.Exit(1)
 	}
 
@@ -94,25 +94,19 @@ func (g *Gantry) HandleMessageIfExists() error {
 	entrypointFI, err := os.Stat(filepath.Join(dest, "entrypoint.sh"))
 	if err != nil {
 		err = errors.Errorf("message with id %s does contain entrypoint.sh in root directory, will be deleted", msg.ID())
-		messageLogger.WithFields(Fields{
-			"error": err,
-		}).Error("could not find entrypoint.sh")
+		messageLogger.WithFields(ErrorFields(err)).Error("could not find entrypoint.sh")
 		return err
 	}
 	if entrypointFI.Mode()&0111 == 0 { // check for executable bit for owner
 		err = errors.Errorf("expected payload to contain executable entrypoint.sh check the filemode")
-		messageLogger.WithFields(Fields{
-			"error": err,
-		}).Error("entrypoint.sh is not executable")
+		messageLogger.WithFields(ErrorFields(err)).Error("entrypoint.sh is not executable")
 		return err
 	}
 
 	// Get the current working dir, and restore it once we're done with the script
 	pwd, err := os.Getwd()
 	if err != nil {
-		messageLogger.WithFields(Fields{
-			"error": err,
-		}).Error("cannot get working directory")
+		messageLogger.WithFields(ErrorFields(err)).Error("cannot get working directory")
 		return errors.Wrap(err, "cannot get working directory")
 	}
 	defer func(old string) {
