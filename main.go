@@ -41,12 +41,12 @@ func publish(logger Logger) {
 	p := Payloader{}
 	payload, err := p.DirToTarGz(sourceDir)
 	if err != nil {
-		logger.Fatal("can not pack directory info tar archive", err)
+		logger.WithFields(ErrorFields(err)).Fatal("can not pack directory info tar archive")
 	}
 
 	err = NewAWSSQS(queueURL, logger, visibilityTimeout).PublishPayload(environ, payload)
 	if err != nil {
-		logger.Fatal("can not publish payload. ", err)
+		logger.WithFields(ErrorFields(err)).Fatal("can not publish payload")
 	}
 }
 
@@ -86,7 +86,7 @@ func main() {
 		logger.Fatal("please specify queue url via -sqs-queue-url")
 	}
 	if _, err := url.Parse(queueURL); err != nil {
-		logger.Fatalf("can't parse url, try again please")
+		logger.WithFields(ErrorFields(err)).Fatalf("can't parse url, try again please")
 	}
 
 	switch flag.Arg(0) {
